@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<!--
+
+Copyright 2017 Tobias Thelen, tt@tobiasthelen.de
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software
+and associated documentation files (the "Software"), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE
+AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ReadSyll</title>
+    <script src="bower_components/jquery/dist/jquery.min.js"></script>
+    <script src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script src="bower_components/bootstrap-toggle/js/bootstrap-toggle.min.js"></script>
+    <script src="data/data.js"></script>
+    <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap-theme.min.css">
+    <link rel="stylesheet" href="bower_components/bootstrap-toggle/css/bootstrap-toggle.min.css">
+    <style>
+        .center{
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .word {
+
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-default">
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">ReadSyll 0.1</a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+
+            <ul class="nav navbar-nav">
+
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Wortliste: <span id="thewordlist">...auswählen...</span> <span class="caret"></span></a>
+                    <ul class="dropdown-menu" id="wordlists">
+                    </ul>
+                </li>
+            </ul>
+
+            <form class="navbar-form navbar-left" >
+                <div class="form-group">
+                    <input checked data-toggle="toggle" type="checkbox" name="automatic"
+                           id="automatic" data-on="Automatisch" data-off="Manuell" checked>
+                </div> &nbsp;
+                <div class="form-group" id="exposure-form">
+                    <input type="text" class="form-control" id="exposure" value="2" size="1">
+                    Sekunden Anzeige
+                </div>
+
+            </form>
+
+
+            <form class="navbar-form navbar-left">
+                <div class="form-group">
+                    <button class="btn btn-success" id="start">Start</button>
+                </div></form>
+
+                </div><!-- /.navbar-collapse -->
+    </div><!-- /.container-fluid -->
+</nav>
+
+<div class="center">
+    <span class="word"></span>
+</div>
+
+<script>
+    // change font size according to screen resolution
+
+    var automatic_mode = true; // auto switching
+    var running = false; // running?
+    var exposure= 2;
+    var delay = 2;
+    var timeout = null;
+    var wordlist = "vollsilben";
+    var wordlist_idx = 0;
+
+    String.prototype.capitalize = function() {
+        return this.charAt(0).toUpperCase() + this.slice(1);
+    }
+
+    function resize_font() {
+        var default_size = 18; // adjust to smaller or lager values
+        $(".word").css('font-size', document.body.clientWidth*(default_size/1280) + "em");
+    }
+
+    function show_word() {
+        if (!running) return false;
+        if (!wordlist) return false;
+        if (wordlist_idx >= wordlist.length-1)
+            wordlist_idx = 0;
+        var word = data[wordlist][wordlist_idx++];
+        var duration = exposure * 1000;
+        $(".word").html(word);
+        if (timeout) clearTimeout(timeout);
+        if (automatic_mode)
+            timeout = setTimeout(function () {
+                $(".word").html("");
+                timeout = setTimeout(show_word, delay * 1000);
+            }, duration);
+    }
+
+    // Behaviour of 'automatic' switch
+    $('#automatic').change(function() {
+        automatic_mode = $(this).prop('checked');
+        if (automatic_mode) { // automatic
+            $('#exposure-form').show();
+            exposure = $("#exposure").val();
+        } else {  // switch to manual
+            $('#exposure-form').hide();
+            if (timeout) {  // stop current timeout
+                clearTimeout(timeout);
+            }
+            timeout = null;
+        }
+    });
+
+    // change exposure time
+    $('#exposure').change(function () {
+        var e = parseInt($('#exposure').val());
+        if (e!==NaN) {
+            exposure=e;
+        }
+    });
+
+    // click start or stop
+    $('#start').click(function (event) {
+        event.preventDefault();
+        if (!wordlist) return;
+       if (running) {  // stop
+           $('#start').removeClass('btn-danger').addClass('btn-success');
+           $('#start').html("Start");
+           if (timeout) clearTimeout(timeout);
+           timeout=null;
+           $('word').html("");
+           running = false;
+       } else { // start
+           $('#start').removeClass('btn-success').addClass('btn-danger');
+           $('#start').html("Stop");
+           if (timeout) clearTimeout(timeout);
+           timeout=null;
+           running = true;
+           show_word();
+       }
+    });
+
+    // select wordlist
+    $('#wordlists').on("click", ".wordlist", select_wordlist);
+
+    $("body").on("keypress", function (e) {
+        if (!$(e.target).is('input')) {
+            show_word();
+        }});
+
+    function select_wordlist() {
+        wordlist = $(this).data('wordlist');
+        wordlist_idx = 0;
+        $('#thewordlist').html(wordlist.capitalize());
+        $('#start').removeClass('btn-danger').addClass('btn-success');
+        $('#start').html("Start");
+        if (timeout) clearTimeout(timeout);
+        timeout=null;
+        $('word').html("");
+        running = false;
+    };
+
+    // read data files
+    function read_data() {
+        // fill dropdown menu
+        for (var i=0; i<data_files.length; i++) {
+            $("#wordlists").append("<li class='wordlist' data-wordlist='"+data_files[i]+"'><a onlick='select_wordlist' class='wordlist' href='#' data-wordlist='"+data_files[i]+"'>" + data_files[i].capitalize()+"</a></li>");
+        };
+    }
+
+    // resize window
+    $(window).on("resize", resize_font);
+
+    // preparation after load
+    $(document).ready(function() {
+        read_data();
+        $('#automatic').bootstrapToggle();
+        $('#thewordlist').html(wordlist.capitalize());
+        resize_font();
+    });
+</script>
+</body>
+</html>
