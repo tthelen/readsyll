@@ -39,6 +39,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
         .word {
 
         }
+
+        #thewordlist {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -75,9 +79,21 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
                 </div> &nbsp;
                 <div class="form-group" id="exposure-form">
                     <input type="text" class="form-control" id="exposure" value="2" size="1">
-                    Sekunden Anzeige
+                    Sekunden Anzeige und
                 </div>
 
+                <div class="form-group" id="delay-form">
+                    <input type="text" class="form-control" id="delay" value="2" size="1">
+                    Sekunden Pause
+                </div>
+
+            </form>
+
+            <form class="navbar-form navbar-left" >
+                <div class="form-group">
+                    <input checked data-toggle="toggle" type="checkbox" name="shuffle"
+                           id="shuffle" data-on="zufällig" data-off="geordnet" checked>
+                </div>
             </form>
 
 
@@ -98,6 +114,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
     // change font size according to screen resolution
 
     var automatic_mode = true; // auto switching
+    var shuffle_mode = true; // shuffle or ordered?
     var running = false; // running?
     var exposure= 2;
     var delay = 2;
@@ -117,9 +134,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
     function show_word() {
         if (!running) return false;
         if (!wordlist) return false;
-        if (wordlist_idx >= wordlist.length-1)
+        if (wordlist_idx >= data[wordlist].length-1)
             wordlist_idx = 0;
-        var word = data[wordlist][wordlist_idx++];
+        var word;
+        if (shuffle_mode) {
+            word = data[wordlist][Math.floor(Math.random()*data[wordlist].length)]
+        } else {
+            word = data[wordlist][wordlist_idx++];
+        }
+
         var duration = exposure * 1000;
         $(".word").html(word);
         if (timeout) clearTimeout(timeout);
@@ -135,9 +158,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
         automatic_mode = $(this).prop('checked');
         if (automatic_mode) { // automatic
             $('#exposure-form').show();
+            $('#delay-form').show();
             exposure = $("#exposure").val();
         } else {  // switch to manual
             $('#exposure-form').hide();
+            $('#delay-form').hide();
             if (timeout) {  // stop current timeout
                 clearTimeout(timeout);
             }
@@ -151,6 +176,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
         if (e!==NaN) {
             exposure=e;
         }
+    });
+
+    $('#delay').change(function () {
+        var d = parseInt($('#delay').val());
+        if (d!==NaN) {
+            delay=d;
+        }
+    });
+
+    // Behaviour of 'shuffle' switch
+    $('#shuffle').change(function() {
+        shuffle_mode = $(this).prop('checked');
     });
 
     // click start or stop
